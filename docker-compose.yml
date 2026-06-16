@@ -1,0 +1,91 @@
+version: "3.8"
+
+networks:
+  health-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  mongo-data:
+
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    networks:
+      - health-net
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-healthdata}
+      POSTGRES_USER: ${POSTGRES_USER:-drill}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-drill123}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-drill} -d ${POSTGRES_DB:-healthdata}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo:
+    image: mongo:6
+    container_name: mongo
+    networks:
+      - health-net
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-drill}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-drill123}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-healthdata}
+    volumes:
+      - mongo-data:/data/db
+      - ./init-mongo:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  drill:
+    image: apache/drill:1.21.0
+    platform: linux/amd64
+    container_name: drill
+    networks:
+      - health-net
+    ports:
+      - "8047:8047"   # Web UI
+      - "31010:31010" # JDBC / user port
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    volumes:
+      - ./data:/data/healthdata
+      - ./drill-config/storage-plugins.json:/opt/drill/conf/storage-plugins-override.json
+    environment:
+      DRILL_HEAP: "4G"
+      DRILL_MAX_DIRECT_MEMORY: "8G"
+    command: /opt/drill/bin/drillbit.sh run  
+
+  jupyter:
+    image: jupyter/scipy-notebook:latest
+    container_name: jupyter
+    networks:
+      - health-net
+    ports:
+      - "8888:8888"
+    depends_on:
+      - drill
+    volumes:
+      - ./notebooks:/home/jovyan/work/notebooks
+      - ./data:/home/jovyan/work/data
+      - ./queries:/home/jovyan/work/queries
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+      JUPYTER_TOKEN: ""
+    command: start-notebook.sh --NotebookApp.token='' --NotebookApp.password=''

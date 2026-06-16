@@ -1,0 +1,4 @@
+donwload jdbc-drivers:
+1. # Dalla root del progetto
+    curl -L -o jdbc-drivers/postgresql-42.7.3.jar \
+    https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.3/postgresql-42.7.3.jar

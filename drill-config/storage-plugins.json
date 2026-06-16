@@ -1,0 +1,44 @@
+{
+  "storage": {
+    "dfs": {
+      "type": "file",
+      "connection": "file:///",
+      "workspaces": {
+        "healthdata": {
+          "location": "/data/healthdata",
+          "writable": true,
+          "defaultInputFormat": null
+        }
+      },
+      "formats": {
+        "csv": {
+          "type": "text",
+          "extensions": ["csv"],
+          "extractHeader": true,
+          "delimiter": ","
+        },
+        "json": {
+          "type": "json",
+          "extensions": ["json"]
+        },
+        "parquet": {
+          "type": "parquet"
+        }
+      },
+      "enabled": true
+    },
+    "pg": {
+      "type": "jdbc",
+      "driver": "org.postgresql.Driver",
+      "url": "jdbc:postgresql://postgres:5432/healthdata",
+      "username": "drill",
+      "password": "drill123",
+      "enabled": true
+    },
+    "mongo": {
+      "type": "mongo",
+      "connection": "mongodb://drill:drill123@mongo:27017/",
+      "enabled": true
+    }
+  }
+}
