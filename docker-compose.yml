@@ -67,10 +67,10 @@ services:
     volumes:
       - ./data:/data/healthdata
       - ./drill-config/storage-plugins.json:/opt/drill/conf/storage-plugins-override.json
+    stdin_open: true
     environment:
       DRILL_HEAP: "4G"
       DRILL_MAX_DIRECT_MEMORY: "8G"
-    command: /opt/drill/bin/drillbit.sh run  
 
   jupyter:
     image: jupyter/scipy-notebook:latest

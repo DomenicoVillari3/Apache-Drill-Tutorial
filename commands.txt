@@ -1,4 +1,91 @@
-donwload jdbc-drivers:
-1. # Dalla root del progetto
-    curl -L -o jdbc-drivers/postgresql-42.7.3.jar \
-    https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.3/postgresql-42.7.3.jar
+## A — Ambiente
+
+### Step 03 — Download driver JDBC PostgreSQL
+# Dalla root del progetto
+curl -L -o jdbc-drivers/postgresql-42.7.3.jar \
+  https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.3/postgresql-42.7.3.jar
+
+---
+
+## B — Download e organizzazione dataset
+
+# NOTA: le API Socrata/healthdata.gov hanno limite 1 000 righe senza token.
+# I 5 dataset vanno scaricati manualmente dal portale healthdata.gov
+# come file CSV completi e salvati in data/raw/.
+#
+# Fonti:
+#   Dataset 1 — Hospital Capacity State Timeseries (RAW)
+#     https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh/explore/page/filter
+#   Dataset 2 — Estimated Inpatient Beds State Timeseries
+#     https://healthdata.gov/dataset/COVID-19-Estimated-Inpatient-Beds-Occupied-by-COVI/py8k-j5rq/about_data
+#   Dataset 3 — Public Therapeutic Locator
+#    https://healthdata.gov/Health/COVID-19-Public-Therapeutic-Locator/rxn6-qnx8/about_data
+#   Dataset 4 — Community Profile Report County Level
+#     https://healthdata.gov/dataset/COVID-19-Community-Profile-Report-County-Level/di4u-7yu6/about_data
+#   Dataset 5 — COVID-19 Treatments
+#     https://healthdata.gov/ASPR/COVID-19-Treatments/xkzp-zhs7/about_data
+
+### Step 07b — Organizza i file scaricati in sottodirectory con nomi puliti
+# Dalla root del progetto (adatta DATE alla data nel nome file scaricato)
+DATE=20260617
+mkdir -p data/raw data/covid data/covid_parquet data/county \
+         data/estimated_beds data/therapeutic data/treatments
+
+cp "data/COVID-19_Reported_Patient_Impact_and_Hospital_Capacity_by_State_Timeseries_(RAW)_${DATE}.csv" \
+   data/covid/hospital_capacity.csv
+
+cp "data/COVID-19_Estimated_Inpatient_Beds_Occupied_by_COVID-19_Patients_by_State_Timeseries_${DATE}.csv" \
+   data/estimated_beds/estimated_beds.csv
+
+cp "data/COVID-19_Public_Therapeutic_Locator_${DATE}.csv" \
+   data/therapeutic/therapeutic_locator.csv
+
+cp "data/COVID-19_Community_Profile_Report_-_County-Level_${DATE}.csv" \
+   data/county/community_profile.csv
+
+cp "data/COVID-19_Treatments_${DATE}.csv" \
+   data/treatments/treatments.csv
+
+# Sposta i raw in data/raw/ per pulizia
+mv data/COVID-19_*.csv data/raw/
+
+### Step 09 — Verifica organizzazione
+ls data/covid/ data/estimated_beds/ data/therapeutic/ data/county/ data/treatments/
+
+### Step 10 — Documenta ogni dataset (righe, colonne, peso su disco)
+# Dalla root del progetto
+python3 scripts/inspect_datasets.py > scripts/output/inspect_dataset_out.txt
+cat scripts/output/inspect_dataset_out.txt
+
+---
+
+## C — Normalizzazione colonne e caricamento nelle sorgenti
+
+### Step 11 — Normalizza colonne Dataset 2, 3, 5 (no spazi)
+# Produce *_clean.csv pronti per COPY (Postgres) e mongoimport (MongoDB)
+python3 scripts/normalize_columns.py
+
+### Step 12 — Carica Dataset 2 in PostgreSQL
+# 1. Crea la tabella (passa il file SQL via stdin — non serve montarlo nel container)
+docker exec -i postgres psql -U drill -d healthdata \
+  < init-sql/01_load_estimated_beds.sql
+
+# 2. Copia il CSV pulito nel container e carica con \copy
+docker cp data/estimated_beds/estimated_beds_clean.csv \
+  postgres:/tmp/estimated_beds_clean.csv
+
+docker exec postgres psql -U drill -d healthdata -c \
+  "\copy healthdata.estimated_beds FROM '/tmp/estimated_beds_clean.csv' CSV HEADER;"
+
+# 3. Verifica
+docker exec postgres psql -U drill -d healthdata -c \
+  "SELECT COUNT(*), MIN(collection_date), MAX(collection_date) FROM healthdata.estimated_beds;"
+
+### Step 13 — Carica Dataset 3 in MongoDB
+# Prerequisito: pip install pymongo (dentro Jupyter o env locale)
+python3 init-mongo/01_load_therapeutic.py
+
+# Verifica
+docker exec mongo mongosh \
+  "mongodb://drill:drill123@localhost:27017/healthdata" \
+  --eval "db.therapeutic.countDocuments({})"

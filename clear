@@ -1,0 +1,12 @@
+[OK]   Dataset 2 — Estimated Beds (→ PostgreSQL)
+       data/estimated_beds/estimated_beds.csv → data/estimated_beds/estimated_beds_clean.csv  (0.15 MB)
+       Colonne: ['state', 'collection_date', 'Inpatient Beds Occupied by COVID-19 Patients Estimated', 'Count LL', 'Count UL', 'Percentage of Inpatient Beds Occupied by COVID-19 Patients Estimated', 'Percentage LL', 'Percentage UL', 'Total Inpatient Beds', 'Total LL', 'Total UL', 'geocoded_state'] → ['state', 'collection_date', 'estimated_beds_covid', 'count_ll', 'count_ul', 'pct_beds_covid', 'pct_ll', 'pct_ul', 'total_inpatient_beds', 'total_ll', 'total_ul', 'geocoded_state']
+
+[OK]   Dataset 3 — Therapeutic Locator (→ MongoDB)
+       data/therapeutic/therapeutic_locator.csv → data/therapeutic/therapeutic_locator_clean.csv  (16.09 MB)
+       Colonne: ['Provider Name', 'Address1', 'Address2', 'City', 'County', 'State Code', 'Zip', 'National Drug Code', 'Order Label', 'Courses Available', 'Geocoded Address', 'NPI', 'Last Report Date', 'Provider Status', 'Provider Note'] → ['provider_name', 'address1', 'address2', 'city', 'county', 'state', 'zip', 'national_drug_code', 'order_label', 'courses_available', 'geocoded_address', 'npi', 'last_report_date', 'provider_status', 'provider_note']
+
+[OK]   Dataset 5 — Treatments (dfs CSV)
+       data/treatments/treatments.csv → data/treatments/treatments_clean.csv  (15.40 MB)
+       Colonne: ['Provider Name', 'Address 1', 'Address 2', 'City', 'State', 'Zip', 'Public Phone Number', 'Public Website', 'Latitude', 'Longitude', 'Geopoint', 'Last Report Date', 'Is PAP Site', 'Is Telehealth Site', 'Telehealth Website', 'Pharmacist Prescribing', 'Home Delivery', 'Home Delivery URL', 'Is T2T Site', 'Is ICATT Site', 'Has USG Product', 'Has Commercial Product', 'Has Paxlovid', 'Has Commercial Paxlovid', 'Has USG Paxlovid', 'Has Lagevrio', 'Has Commercial Lagevrio', 'Has USG Lagevrio', 'Has Veklury', 'Grantee Code', 'Provider Note'] → ['provider_name', 'address1', 'address2', 'city', 'state', 'zip', 'public_phone', 'public_website', 'latitude', 'longitude', 'geopoint', 'last_report_date', 'is_pap_site', 'is_telehealth_site', 'telehealth_website', 'pharmacist_prescribing', 'home_delivery', 'home_delivery_url', 'is_t2t_site', 'is_icatt_site', 'has_usg_product', 'has_commercial_product', 'has_paxlovid', 'has_commercial_paxlovid', 'has_usg_paxlovid', 'has_lagevrio', 'has_commercial_lagevrio', 'has_usg_lagevrio', 'has_veklury', 'grantee_code', 'provider_note']
+
