@@ -67,6 +67,7 @@ services:
     volumes:
       - ./data:/data/healthdata
       - ./drill-config/storage-plugins.json:/opt/drill/conf/storage-plugins-override.json
+      - ./jdbc-drivers/postgresql-42.7.3.jar:/opt/drill/jars/3rdparty/postgresql-42.7.3.jar
     stdin_open: true
     environment:
       DRILL_HEAP: "4G"

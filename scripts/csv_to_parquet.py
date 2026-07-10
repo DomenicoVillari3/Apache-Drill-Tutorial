@@ -24,7 +24,14 @@ def convert() -> None:
     df = pd.read_csv(SRC, low_memory=False)
     for col in NUMERIC_COLS:
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+            # I CSV grezzi di healthdata.gov usano la virgola come
+            # separatore delle migliaia (es. "1,338"): va rimossa
+            # prima della conversione numerica, altrimenti pd.to_numeric
+            # la scarta silenziosamente come NaN.
+            df[col] = pd.to_numeric(
+                df[col].astype(str).str.replace(",", "", regex=False),
+                errors="coerce",
+            )
 
     os.makedirs(os.path.dirname(DST), exist_ok=True)
     table = pa.Table.from_pandas(df)
