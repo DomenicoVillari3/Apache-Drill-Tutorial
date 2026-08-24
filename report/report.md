@@ -1,4 +1,4 @@
-# Apache Drill come Query Federation Engine — Tutorial
+„# Apache Drill come Query Federation Engine — Tutorial
 
 > Scheletro del report. Ogni sezione riporta solo i punti fondamentali da sviluppare.
 
@@ -26,7 +26,7 @@
 - Dataset 2 — Estimated Beds (PostgreSQL, `pg`)
 - Dataset 3 — Therapeutic Locator (MongoDB, `mongo`)
 - Dataset 4 — Community Profile / county-level (CSV, `dfs`)
-- Dataset 5 — Treatments / therapeutic sites (CSV, `dfs`)
+- Dataset5 — Treatments / therapeutic sites (CSV, `dfs`)
 - Nota su provenienza: download manuale da healthdata.gov (limite API Socrata 1000 righe)
 
 ## 4. Setup dell'ambiente
