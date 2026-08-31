@@ -183,7 +183,7 @@ Real organizations rarely keep all their data in one place. A typical pipeline h
 flat files dropped by an external partner, a relational database serving an
 operational application, and a document store holding semi-structured records from a
 web service. Answering a single analytical question that spans all three normally
-requires an ETL step: export each source, reshape it into a common format, and load it
+requires an \textbf{ETL }step: export each source, reshape it into a common format, and load it
 into a data warehouse or a single analytical database before a SQL query can touch all
 of it together. That step costs engineering time, introduces staleness (the warehouse
 copy lags the source), and duplicates storage. For small, one-off, or exploratory
@@ -193,7 +193,7 @@ questions, that cost is disproportionate to the question being asked.
 
 The dataset used throughout this tutorial comes from
 \textbf{HealthData.gov}, the open-data portal of the U.S.
-\textbf{Department of Health \& Human Services (HHS)}. Five distinct COVID-19 datasets are
+\textbf{Department of Health \& Human Services (HHS)}. four distinct COVID-19 datasets are
 used, described in full in Section~\ref{sec:datasets}: \begin{itemize}
     \item state-level hospital capacity
 time series
@@ -204,7 +204,7 @@ COVID-19 therapeutic dispensing sites
 \item a
 dataset of antiviral treatment availability by site.
 \end{itemize}
-All five originate from the same
+All four originate from the same
 pandemic-response reporting effort but were designed, collected and shaped by
 different teams for different purposes, which is exactly why they end up looking so
 different from one another: one is a wide, raw, comma-formatted CSV; one is a clean,
@@ -226,8 +226,18 @@ MongoDB;
 schema-on-read, JDBC pushdown and document-model flexibility individually
 \item builds up, step by step, a federated query that joins all three sources in one
 \texttt{SELECT} statement:  first pre-aggregated by state, then at full row-level
-granularity 
-\end{enumerate} 
+granularity
+\end{enumerate}
+
+A scope note: this tutorial deliberately distributes \emph{four different} datasets
+across three backends by natural fit -- a flat time series on \texttt{dfs}, a regular
+relational table on \texttt{pg}, variable-schema records on \texttt{mongo} -- rather
+than copying one identical dataset onto every backend to isolate the effect of
+storage format alone. That second design is a legitimate, complementary question
+(does Parquet beat raw JSON on the same data, does an indexed lookup beat a full
+scan), just not the one this tutorial answers: the question here is whether Drill
+can federate heterogeneous, already-fitting sources with no ETL, not how fast any
+one format is in isolation.
 % =======================================================================
 \section{System Architecture}
 \label{sec:architecture}
@@ -295,10 +305,10 @@ administration UIs, \texttt{pgadmin} (a PostgreSQL admin console on port 5050) a
 \texttt{mongo-express} (a MongoDB admin console on port 8081). Neither is essential for the work of Drill: they exist purely so a human can browse the raw tables/collections
 visually while debugging, so they are omitted from Figure~\ref{fig:architecture}.
 % =======================================================================
-\section{The Five Datasets}
+\section{The Four Datasets}
 \label{sec:datasets}
 
-All five datasets are published by HealthData.gov and describe different facets of
+All four datasets are published by HealthData.gov and describe different facets of
 the U.S. COVID-19 response. HealthData.gov exposes them through a Socrata API that
 caps unauthenticated responses at 1{,}000 rows, \textbf{so the full files were downloaded
 manually from the portal} rather than paginated programmatically (see Section B, for the exact download commands). Table~\ref{tab:datasets}
@@ -316,10 +326,10 @@ dataset actually records and which columns matter for the queries in this tutori
 2. Estimated Beds         & \texttt{pg}    & 1{,}612  & 12   & Regular relational table, HHS's own estimate \\
 3. Therapeutic Locator    & \texttt{mongo} & 69{,}184 & 15   & Variable-schema provider records \\
 4. Community Profile (county) & \texttt{dfs} & 3{,}294 & 39   & Finer-grained companion to Dataset 1 \\
-5. Treatments             & \texttt{dfs}   & 64{,}237 & 31 & Prepared, not queried live (see Appendix~\ref{app:extra}) \\
+%5. Treatments             & \texttt{dfs}   & 64{,}237 & 31 & Prepared, not queried live (see Appendix~\ref{app:extra}) \\
 \bottomrule
 \end{tabular}
-\caption{The five datasets, their Drill storage plugin, and their raw size as measured
+\caption{The four datasets, their Drill storage plugin, and their raw size as measured
 by \texttt{scripts/inspect\_datasets.py}.}
 \label{tab:datasets}
 \end{table}
@@ -402,19 +412,28 @@ than a raw daily count. Used in the multi-scale Query~6
     -- vaccination coverage.
 \end{itemize}
 
-\paragraph{Dataset 5: COVID-19 Treatments.}
-A wide, mostly-boolean table describing \emph{where} each of the three antiviral
-drugs (Paxlovid, Lagevrio, Veklury) is stocked and through which supply channel
-(government vs.\ commercial). It was cleaned and loaded onto the \texttt{dfs} plugin
-like Datasets 1 and 4, but --- per the scope of this tutorial's live notebook --- it is
-not queried in the sections that follow; a ready-to-run example query against it is
-given in Appendix~\ref{app:extra} for readers who want to extend the demo.
-Representative columns: \texttt{provider\_name}, \texttt{city}, \texttt{state},
-\texttt{zip}, \texttt{latitude}/\texttt{longitude}, \texttt{is\_pap\_site},
-\texttt{is\_telehealth\_site}, \texttt{pharmacist\_prescribing},
-\texttt{home\_delivery}, and one boolean flag per drug and supply channel
-(\texttt{has\_paxlovid}, \texttt{has\_usg\_paxlovid}, \texttt{has\_commercial\_paxlovid},
-\texttt{has\_lagevrio}, \ldots, \texttt{has\_veklury}).
+%\paragraph{Dataset 5: COVID-19 Treatments.}
+%A wide, mostly-boolean table describing \emph{where} each of the three antiviral drugs (Paxlovid, Lagevrio, Veklury) is stocked and through which supply channel (government vs.\ commercial). It was cleaned and loaded onto the \texttt{dfs} plugin like Datasets 1 and 4, but --- per the scope of this tutorial's live notebook --- it is not queried in the sections that follow; a ready-to-run example query against it is given in Appendix~\ref{app:extra} for readers who want to extend the demo. Representative columns: \texttt{provider\_name}, \texttt{city}, \texttt{state}, \texttt{zip}, \texttt{latitude}/\texttt{longitude}, \texttt{is\_pap\_site}, \texttt{is\_telehealth\_site}, \texttt{pharmacist\_prescribing}, \texttt{home\_delivery}, and one boolean flag per drug and supply channel (\texttt{has\_paxlovid}, \texttt{has\_usg\_paxlovid}, \texttt{has\_commercial\_paxlovid}, \texttt{has\_lagevrio}, \ldots, \texttt{has\_veklury}).
+
+Table~\ref{tab:roles} summarizes, in one place, the fit between each backend and the
+kind of data it was given -- the reasoning spelled out per-dataset above, collected
+into a single reference.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{@{}l p{4.4cm} p{6.4cm}@{}}
+\toprule
+\textbf{Backend} & \textbf{Why this shape fits} & \textbf{Dataset(s)} \\
+\midrule
+\texttt{dfs} & Periodic flat files, no schema to declare, exactly as delivered by the source & Dataset~1 (Hospital Capacity, raw + numbers-cleaned), Dataset~4 (Community Profile) \\
+\texttt{pg}  & Regular, stable schema (state $\times$ date $\times$ a handful of numeric estimates); benefits from a typed table and indexed lookups & Dataset~2 (Estimated Beds) \\
+\texttt{mongo} & Fields vary by therapy type; one record per (site, drug) pair, naturally irregular & Dataset~3 (Therapeutic Locator) \\
+\bottomrule
+\end{tabular}
+\caption{Why each dataset ended up on a specific backend}
+\label{tab:roles}
+\end{table}
 
 % =======================================================================
 \newpage
@@ -563,13 +582,13 @@ schema-on-read demo does.
 
 \subsection{Obtaining the Raw Datasets}
 \label{sec:download-datasets}
-Unlike the JDBC driver above, the five datasets \textbf{cannot} be fetched with a
+Unlike the JDBC driver above, the four datasets \textbf{cannot} be fetched with a
 plain \texttt{curl} against a fixed URL: HealthData.gov exposes them through the
 Socrata Open Data API, which caps unauthenticated responses at 1{,}000 rows, far
 from the 81{,}713 rows in Dataset~1 alone. Reproducing this project therefore
 starts \textbf{with a manual step}:\textbf{ open each dataset's page in a browser and use the
 portal's \emph{Export~$\rightarrow$~CSV} (or \emph{Download}) button to obtain the
-full file, saving all five into \texttt{data/} at the project root.}
+full file, saving all four into \texttt{data/} at the project root.}
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.5\linewidth]{img/download1.png}
@@ -580,7 +599,7 @@ full file, saving all five into \texttt{data/} at the project root.}
     \includegraphics[width=0.5\linewidth]{img/download2.png}
 \end{figure}
 
-\begin{lstlisting}[style=bashstyle, caption={The five HealthData.gov dataset pages (commands.txt, Section B).}]
+\begin{lstlisting}[style=bashstyle, caption={The four HealthData.gov dataset pages (commands.txt, Section B).}]
 # Dataset 1 -- Hospital Capacity, State Timeseries (RAW)
 https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh/explore/page/filter
 
@@ -593,11 +612,10 @@ https://healthdata.gov/Health/COVID-19-Public-Therapeutic-Locator/rxn6-qnx8/abou
 # Dataset 4 -- Community Profile Report, County Level
 https://healthdata.gov/dataset/COVID-19-Community-Profile-Report-County-Level/di4u-7yu6/about_data
 
-# Dataset 5 -- COVID-19 Treatments
-https://healthdata.gov/ASPR/COVID-19-Treatments/xkzp-zhs7/about_data
+
 \end{lstlisting}
 
-Once the five raw CSVs are sitting in \texttt{data/} (each with a date suffix from
+Once the four raw CSVs are sitting in \texttt{data/} (each with a date suffix from
 the download, e.g.\ \texttt{\_20260617}), a second script-free step organizes them
 into the clean per-dataset subdirectories every later section assumes:
 
@@ -804,7 +822,41 @@ With all three plugins verified, the tutorial first queries each source
 \emph{individually}, before combining
 them in Section~\ref{sec:federated-join}. All SQL below, and all timings quoted, are
 taken verbatim from the accompanying \texttt{notebooks/analysis.ipynb}
-(Section~\ref{sec:notebook}).
+(Section~\ref{sec:notebook}). Table~\ref{tab:queryset} gives the full roadmap before
+the per-query detail below: Q1--Q3 each touch one backend; QP is a single-row point
+lookup rather than an aggregation, added specifically to cover a query shape none of
+Q1--Q3 exercise; Q4a--Q4c join every possible pair among the three backends,
+pre-aggregated; Q4d joins all three, still pre-aggregated; Q4f repeats the
+\texttt{dfs}+\texttt{pg} pair from Q4a at row-level granularity instead; Q6 joins two
+files on the same backend (\texttt{dfs}).
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{@{}l p{2.6cm} p{9.2cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Shape} & \textbf{Query} \\
+\midrule
+Q1  & aggregation + top-$N$          & COVID beds in use per state and day, top 20 (raw CSV, schema-on-read) \\
+Q2  & aggregation                    & Avg.\ estimated COVID bed occupancy per state (\texttt{pg}) \\
+Q3  & aggregation + filter           & Active therapy centers per state and drug (\texttt{mongo}) \\
+QP  & point lookup                   & Single (state, date) row, exact match on both predicates (\texttt{pg}) \\
+Q4a & 2-way join, cross-backend      & \texttt{dfs} $\bowtie$ \texttt{pg}, pre-aggregated by state \\
+Q4b & 2-way join, cross-backend      & \texttt{dfs} $\bowtie$ \texttt{mongo}, pre-aggregated by state \\
+Q4c & 2-way join, cross-backend      & \texttt{pg} $\bowtie$ \texttt{mongo}, pre-aggregated by state \\
+Q4d & 3-way join, cross-backend      & \texttt{dfs} $\bowtie$ \texttt{pg} $\bowtie$ \texttt{mongo}, pre-aggregated by state ( ``key query'') \\
+Q4f & row-level join, cross-backend  & Q4a's pair (\texttt{dfs} $\bowtie$ \texttt{pg}) at row-level, on state~+~date, enriched with \texttt{mongo}'s aggregate \\
+Q6  & join, same backend             & \texttt{dfs} $\bowtie$ \texttt{dfs} (two files, state vs.\ county granularity) \\
+\bottomrule
+\end{tabular}
+\caption{Full query set. Q1--Q3 touch one backend each; QP is a point lookup, the
+one shape none of the aggregation queries cover; Q4a--Q4c cover all three
+possible cross-backend pairs, pre-aggregated; Q4d is the 3-way pre-aggregated join;
+Q4f re-runs Q4a's exact pair at row-level granularity to isolate the cost of
+pre-aggregation from the cost of federation itself; Q6 joins within a single
+backend as a control.}
+\label{tab:queryset}
+\end{table}
 
 \subsection{Query 1 -- Schema-on-Read on Raw CSV (\texttt{dfs})}
 \begin{lstlisting}[style=sqlstyle]
@@ -833,7 +885,7 @@ fly.
 Drill sorts \texttt{NULL} as larger than any number under a default descending
 \texttt{ORDER BY}, so rows with missing data would otherwise appear \emph{first},
 ahead of every real value.
-\end{itemize}  This query returns 20 rows in 1.37\,s.
+\end{itemize}  This query returns 20 rows in a median 2.22\,s over 3 runs.
 
 \subsection{Query 2 -- Aggregation on PostgreSQL (\texttt{pg})}
 \begin{lstlisting}[style=sqlstyle]
@@ -851,7 +903,7 @@ already a proper \texttt{NUMERIC} column (Section~\ref{sec:data-prep}'s cleaning
 casting is needed, and Drill can push part of the aggregation down to PostgreSQL's
 own query planner rather than computing it entirely in Drill's execution engine. \\
 20
-rows, 0.64\,s.
+rows, a median 1.29\,s over 3 runs.
 
 \subsection{Query 3 -- Schema Flexibility on MongoDB (\texttt{mongo})}
 \begin{lstlisting}[style=sqlstyle]
@@ -869,9 +921,28 @@ MongoDB is a document store: Drill reads each JSON-like document in the
 schema declared anywhere upfront, the table alias \texttt{t} and dot-notation
 (\texttt{t.state}, \texttt{t.order\_label}) are how Drill lets a query reach into
 document fields as if they were ordinary columns. \\
-20 rows, 0.24\,s, the fastest of
-the three single-source queries, helped by the \texttt{idx\_status} index created in
+20 rows, a median 0.25\,s over 3 runs, the fastest of the three aggregation queries
+(Q1--Q3), helped by the \texttt{idx\_status} index created in
 Section~\ref{sec:loading}.
+
+\subsection{Query P -- Point Lookup (\texttt{pg})}
+Q1--Q3 are all aggregations: a full (or filtered) scan followed by a
+\texttt{GROUP BY}. None of them show what Drill does with the query shape that
+benefits most from an index -- a single, highly selective row lookup. Query~P adds
+exactly that:
+\begin{lstlisting}[style=sqlstyle]
+SELECT * FROM pg.healthdata.estimated_beds
+WHERE state = 'CA' AND collection_date = DATE '2021-07-09'
+\end{lstlisting}
+This returns exactly 1 row, in a median 0.21\,s over 3 runs, comparable to Q3 and
+markedly faster than Q1's full-CSV aggregation, even though \texttt{estimated\_beds}
+carries no explicit index beyond its columns. The comparison is honest rather than
+dramatic: with roughly 82{,}000 rows in the underlying tables, even a linear scan
+inside PostgreSQL is fast enough that a two-predicate filter barely registers, and
+Section~\ref{sec:notebook}'s planning/queued/execution breakdown
+(Figure~\ref{fig:timing-breakdown}) shows why, for a query this cheap, Drill's own
+query \emph{planning} is the larger share of the total time, not execution against
+the backend.
 
 % =======================================================================
 \section{Building the Federated Join Incrementally}
@@ -1019,24 +1090,20 @@ JOIN c ON hp.state = c.state
 ORDER BY hp.state, hp.`date`
 \end{lstlisting}
 
-Two technical points make this query different from the earlier ones. \textbf{First, the
-join condition mixes two representations of the same concept}:
-\texttt{dfs}'s \texttt{date} is a plain \texttt{VARCHAR} in \texttt{yyyy/MM/dd}
-format, while \texttt{pg}'s \texttt{collection\_date} is a native SQL \texttt{DATE}, so the join predicate must call \texttt{TO\_DATE(h.\`date\`, 'yyyy/MM/dd')} to make
-the two sides comparable -- this is genuine cross-system type heterogeneity, not
-dirty data, so unlike \texttt{inpatient\_beds\_used\_covid} it is not something the
-pre-cleaning in Section~\ref{sec:data-prep} removes. Second, because neither side is pre-aggregated, the join
-now has to match against the full row-level granularity of both time series: it
-returns 1{,}581 rows rather than 51, and takes 4.96\,s, by far the slowest query in
-the tutorial (Figure~\ref{fig:join-cost}). The distinction between ``3-way'' and
-``row-level'' is worth stating explicitly, because they are two independent axes:
-\emph{3-way} describes how many sources are joined; \emph{row-level} describes
-\emph{at what granularity} the join happens. Query~4d is 3-way but pre-aggregated;
-Query~4f is only 2-way at the row-level stage (\texttt{dfs}+\texttt{pg}), with the
-third source (\texttt{mongo}) folded in afterward, still aggregated. It is precisely
-the combination of \emph{more sources} and \emph{finer granularity} that makes a
-federated join expensive, and Figure~\ref{fig:join-cost} shows both effects
-side by side.
+Two things set this query apart. \textbf{First, the join condition bridges two date
+representations}: \texttt{dfs}'s \texttt{date} is a plain \texttt{VARCHAR}
+(\texttt{yyyy/MM/dd}), \texttt{pg}'s \texttt{collection\_date} a native \texttt{DATE},
+so the predicate needs \texttt{TO\_DATE(h.\`date\`, 'yyyy/MM/dd')}. \textbf{Second, neither side is
+pre-aggregated}: the join matches at full row-level granularity, returning
+1{,}581 rows instead of 51, at a median 2.61\,s over 3 runs: by far the slowest
+query in the tutorial (Figure~\ref{fig:join-cost}). 
+
+This also separates two
+independent axes: \emph{3-way} (how many sources) vs.\ \emph{row-level} (what
+granularity). Query~4d is 3-way but pre-aggregated; Query~4f is only 2-way at
+row-level (\texttt{dfs}+\texttt{pg}), with \texttt{mongo} folded in afterward, still
+aggregated. It is the combination of more sources \emph{and} finer granularity that
+makes a federated join expensive, as Figure~\ref{fig:join-cost} shows.
 
 \begin{figure}[H]
 \centering
@@ -1081,7 +1148,7 @@ JOIN dfs.healthdata.`county/community_profile.csv` c
 ORDER BY state_covid_beds DESC, county_cases_7d DESC
 LIMIT 30
 \end{lstlisting}
-This query returns 30 rows in 1.27\,s and pairs each state's aggregate bed usage with
+This query returns 30 rows in a median 0.70\,s over 3 runs and pairs each state's aggregate bed usage with
 every county inside it, ordered so that the state under the most pressure (and, within
 it, the counties with the most recent cases) appear first.
 
@@ -1092,77 +1159,105 @@ it, the counties with the most recent cases) appear first.
 \subsection{Why REST, not JDBC}
 The notebook drives every query in this tutorial through Drill's REST API
 (\texttt{POST~/query.json}) rather than a JDBC or ODBC driver. This keeps the Jupyter
-container's dependencies to just \texttt{requests} and \texttt{pandas}, and it makes timing trivial: wrap
-the HTTP call in \texttt{time.perf\_counter()} and log the elapsed time alongside the
-row count.
+container's dependencies to just \texttt{requests} and \texttt{pandas}, and it makes
+timing straightforward. Wall-clock alone, though, only measures the round trip as
+seen from the client; it cannot say how much of that time Drill spent
+\emph{planning} the query versus actually \emph{executing} it against a backend. To
+get both, \texttt{drill\_query} runs each query 3 times, keeps the \emph{median}
+wall-clock time (so a single slow outlier does not skew the log), and then fetches
+Drill's own server-side profile for the last run
+(\texttt{GET~/profiles/\{queryId\}.json}), which reports three phase boundaries
+(\texttt{start}, \texttt{planEnd}, \texttt{queueWaitEnd}, \texttt{end}, all epoch
+milliseconds) that separate planning time, time spent queued, and actual execution
+time -- server-side numbers, not just the REST round trip.
 
 \begin{lstlisting}[style=pystyle, caption={The query helper used by every cell in analysis.ipynb.}]
 import time
+import statistics
 import requests
 import pandas as pd
 
 DRILL_REST = "http://drill:8047/query.json"
+DRILL_PROFILE = "http://drill:8047/profiles/{}.json"
 
-def drill_query(sql: str, label: str = None, group: str = None):
-    """execute a SQL query on Apache Drill and return the result as a pandas DataFrame"""
+def drill_query(sql: str, label: str = None, group: str = None, repeats: int = 3):
+    """execute a SQL query `repeats` times, return the result as a DataFrame; log the
+    median wall-clock time plus Drill's own planning/queued/execution breakdown"""
     payload = {"queryType": "SQL", "query": sql}
+    wall_times = []
+    data = None
 
-    init = time.perf_counter()
-    r = requests.post(DRILL_REST, json=payload, timeout=120)
-    end = time.perf_counter() - init
+    for _ in range(repeats):
+        init = time.perf_counter()
+        r = requests.post(DRILL_REST, json=payload, timeout=120)
+        wall_times.append(time.perf_counter() - init)
 
-    r.raise_for_status()  # raise an exception if the request failed
-    data = r.json()
+        r.raise_for_status()  # raise an exception if the request failed
+        data = r.json()
 
-    if data.get("queryState") == "FAILED":
-        raise RuntimeError(f"ERROR: {data}")
+        if data.get("queryState") == "FAILED":
+            raise RuntimeError(f"ERROR: {data}")
+
+    profile = requests.get(DRILL_PROFILE.format(data["queryId"]), timeout=30).json()
+    planning_ms = profile["planEnd"] - profile["start"]
+    queued_ms = profile["queueWaitEnd"] - profile["planEnd"]
+    execution_ms = profile["end"] - profile["queueWaitEnd"]
 
     df = pd.DataFrame(data.get("rows", []), columns=data.get("columns", []))
-    timings.append({"query": label, "group": group, "seconds": end, "rows": len(df)})
+    median_seconds = statistics.median(wall_times)
 
-    print(f"{label} {end:.3f}s -- {len(df)} rows")
+    timings.append({
+        "query": label, "group": group, "seconds": median_seconds, "rows": len(df),
+        "planning_ms": planning_ms, "queued_ms": queued_ms, "execution_ms": execution_ms,
+    })
+
+    print(f"{label} median={median_seconds:.3f}s (n={repeats}) -- {len(df)} rows "
+          f"[plan {planning_ms}ms / queue {queued_ms}ms / exec {execution_ms}ms]")
     return df
 \end{lstlisting}
 
 Every query cell in this tutorial calls \texttt{drill\_query(sql, label=\ldots,
 group=\ldots)}; the \texttt{timings} list it appends to is what produces
-Table~\ref{tab:timings} and Figure~\ref{fig:timings-by-category} below.
+Table~\ref{tab:timings}, Figure~\ref{fig:timings-by-category} and
+Figure~\ref{fig:timing-breakdown} below.
 
 \subsection{Full Results Summary}
-Table~\ref{tab:timings} reproduces the notebook's complete timing log for a single,
+Table~\ref{tab:timings} reproduces the notebook's complete timing log for a full
 sequential run of every cell -- from the initial sanity check through Query~6 -- with
-its category, elapsed seconds and returned row count.
+its category, median seconds over 3 repeats, returned row count, and Drill's own
+server-side planning/queued/execution breakdown for the final repeat, in
+milliseconds.
 
 \begin{table}[htbp]
 \centering
 \small
-\begin{tabular}{@{}l l r r@{}}
+\begin{tabular}{@{}l l r r r r r@{}}
 \toprule
-\textbf{Query} & \textbf{Category} & \textbf{Seconds} & \textbf{Rows} \\
+\textbf{Query} & \textbf{Category} & \textbf{Sec.} & \textbf{Rows} & \textbf{Plan (ms)} & \textbf{Queued (ms)} & \textbf{Exec (ms)} \\
 \midrule
-sanity-check           & setup           & 0.378 & 1 \\
-Q1 dfs-csv              & single-source   & 1.374 & 20 \\
-Q2 pg                   & single-source   & 0.644 & 20 \\
-Q3 mongo                & single-source   & 0.238 & 20 \\
-Q4a dfs+pg              & 2-way-join      & 2.143 & 51 \\
-Q4b dfs+mongo           & 2-way-join      & 0.988 & 52 \\
-Q4c pg+mongo            & 2-way-join      & 1.821 & 51 \\
-Q4d dfs+pg+mongo        & 3-way-join      & 2.487 & 51 \\
-Q4f dfs+pg+mongo row-level & row-level-join & 4.957 & 1{,}581 \\
-Q6 dfs-multi-scale      & other           & 1.272 & 30 \\
+sanity-check               & setup           & 0.179 & 1     & 18  & 0 & 6    \\
+Q1 dfs-csv                 & single-source   & 2.219 & 20    & 255 & 0 & 1{,}584 \\
+Q2 pg                      & single-source   & 1.291 & 20    & 170 & 0 & 343  \\
+Q3 mongo                   & single-source   & 0.248 & 20    & 107 & 0 & 51   \\
+QP point-lookup            & single-source   & 0.205 & 1     & 61  & 0 & 9    \\
+Q4a dfs+pg                 & 2-way-join      & 1.669 & 51    & 520 & 1 & 1{,}001 \\
+Q4b dfs+mongo              & 2-way-join      & 1.371 & 52    & 327 & 0 & 797  \\
+Q4c pg+mongo               & 2-way-join      & 0.631 & 51    & 172 & 0 & 397  \\
+Q4d dfs+pg+mongo           & 3-way-join      & 2.075 & 51    & 668 & 1 & 1{,}630 \\
+Q4f dfs+pg+mongo row-level & row-level-join  & 2.611 & 1{,}581 & 409 & 0 & 2{,}130 \\
+Q6 dfs-multi-scale         & other           & 0.700 & 30    & 173 & 0 & 493  \\
 \bottomrule
 \end{tabular}
-\caption{Complete timing log for one sequential run of the notebook, after the
-CTE/clean-CSV rewrite of Q4a--Q4d, Q4f and Q6. Query labels are
-normalized to the canonical plugin name \texttt{pg}; the notebook's own internal
-timing keys may show the informal alias \texttt{postgre} instead.}
+\caption{Complete timing log for one full run of the notebook, median of 3 repeats
+per query. Planning/queued/execution columns come from Drill's own
+query profile for the last of the 3 repeats.}
 \label{tab:timings}
 \end{table}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.7\textwidth]{img/timings_by_category.png}
-\caption{Execution time for every query in the notebook, colored by category.}
+\includegraphics[width=1\textwidth]{img/timings_by_category.png}
+\caption{Median execution time (3 repeats) for every query in the notebook, colored by category.}
 \label{fig:timings-by-category}
 \end{figure}
 
@@ -1170,10 +1265,32 @@ Reading Table~\ref{tab:timings} and Figure~\ref{fig:timings-by-category} togethe
 three factors visibly drive latency in this federated setup: \emph{how many sources}
 a query touches (single-source queries are consistently the fastest), \emph{whether
 the join is pre-aggregated or row-level} (Q4f's jump to 1{,}581 rows dominates the
-whole chart), and, more subtly, \emph{which} single source is queried -- \texttt{mongo}
-(Q3) is faster than \texttt{dfs} (Q1) here, largely because of the indexes created in
-Section~\ref{sec:loading} and because \texttt{dfs} still has to parse and cast a raw
-CSV column on every row.
+whole chart), and, more subtly, \emph{which} single source is queried: \texttt{mongo}
+(Q3) is faster than \texttt{dfs} (Q1) here.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{img/timing_breakdown.png}
+\caption{Share of total time spent planning, queued, and executing, per query, from
+Drill's own profile (\texttt{GET~/profiles/\{queryId\}.json}).}
+\label{fig:timing-breakdown}
+\end{figure}
+
+Figure~\ref{fig:timing-breakdown} splits each query's total time into the three
+phases Drill's profile reports. \texttt{queued\_ms} is 0--1\,ms across the board:
+with a single Drillbit and no concurrent workload, no query ever waits for
+resources, so that phase is invisible on this setup and would only become
+interesting under concurrent load or a resource-constrained cluster. The
+planning/execution split, on the other hand, is not uniform, and it tracks how much
+actual work a query does against its backend rather than how many sources it
+touches: the sanity check (75\% planning) and QP's single-row point lookup (87\%
+planning) are so cheap to execute that Drill's own query planning dominates their
+total time, while every join and Q1's full-CSV scan spend the clear majority of
+their time in execution (65--86\%), because there is simply more data to read,
+cast, and shuffle once the query starts running. This is the reason Table~\ref{tab:timings}'s
+seconds column and this breakdown are not redundant: a query can be ``slow'' either
+because Drill takes a while to decide how to run it, or because running it is
+genuinely expensive, and only the server-side profile tells the two apart.
 
 % =======================================================================
 \section{Discussion}
@@ -1198,6 +1315,19 @@ CSV column on every row.
     that gap explicitly with \texttt{TO\_DATE(h.\`date\`, 'yyyy/MM/dd') =
     e.collection\_date} in the join predicate -- Drill does not implicitly convert
     between the two.
+  \item[The storage-plugin override file was silently never applied.] For most of
+    this project's development, \texttt{drill-config/storage-plugins.json} was
+    mounted into the container as\\ \texttt{storage-plugins-override.json}. Drill only
+    ever looks for a file named \\ exactly \texttt{storage-plugins-override.conf} (HOCON
+    format), so that mount was inert: every restart quietly re-seeded Drill with its
+    own bootstrap plugins (\texttt{cp}, \texttt{dfs} pointed at the container root) and
+    silently dropped \texttt{pg} and \texttt{mongo}: no error, no warning, in no log
+    file. It surfaced as queries against \texttt{pg}/\texttt{mongo} failing with an
+    empty \texttt{FAILED} response and no message at all, and was only found by
+    inspecting Drill's own local persistent store:
+    (\texttt{/tmp/drill/sys.storage\_plugins/} inside the container) directly and
+    noticing the custom plugins were never written there. The fix (Section~\ref{sec:plugins})
+    was renaming the file and the mount destination to \texttt{.conf}.
 \end{description}
 
 \subsection{Limits of This Setup}
@@ -1227,10 +1357,15 @@ That incremental build-up also surfaced Drill's real cost, not just its convenie
 pushing filters and aggregations down into a single plugin is cheap, but the join
 \emph{across} plugins always happens in Drill's own memory, so its cost scales with
 row count rather than with any backend's optimizer. Query~4f's row-level join, about
-2$\times$ Query~4d's runtime over roughly 30$\times$ the rows, makes that limit
-concrete rather than theoretical.
+1.3$\times$ Query~4d's runtime over roughly 30$\times$ the rows, makes that limit
+concrete rather than theoretical: row count, not join arity, is what actually drives
+the cost of federation here. Timing every query as the median of 3 repeats, and
+cross-checking that against Drill's own server-side planning/queued/execution
+breakdown (Section~\ref{sec:notebook}), rules out a one-off slow run as the
+explanation and confirms the gap is real execution cost, not noise.
 
 % =======================================================================
+\newpage
 \appendix
 \section{Appendix}
 \label{app:extra}

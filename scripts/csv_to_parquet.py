@@ -1,7 +1,5 @@
-"""
-Converte hospital_capacity.csv in Parquet columnar con pyarrow.
-Uso: python scripts/csv_to_parquet.py
-"""
+#hospital_capacity.csv in Parquet columnar con pyarrow.
+
 import os
 import pandas as pd
 import pyarrow as pa
@@ -24,10 +22,6 @@ def convert() -> None:
     df = pd.read_csv(SRC, low_memory=False)
     for col in NUMERIC_COLS:
         if col in df.columns:
-            # I CSV grezzi di healthdata.gov usano la virgola come
-            # separatore delle migliaia (es. "1,338"): va rimossa
-            # prima della conversione numerica, altrimenti pd.to_numeric
-            # la scarta silenziosamente come NaN.
             df[col] = pd.to_numeric(
                 df[col].astype(str).str.replace(",", "", regex=False),
                 errors="coerce",
@@ -39,9 +33,10 @@ def convert() -> None:
 
     src_mb = os.path.getsize(SRC) / (1 << 20)
     dst_mb = os.path.getsize(DST) / (1 << 20)
-    print(f"  CSV:     {src_mb:.1f} MB")
-    print(f"  Parquet: {dst_mb:.1f} MB  (ratio {src_mb/dst_mb:.1f}x)")
-    print(f"  Rows: {len(df):,}  Columns: {len(df.columns)}")
+
+    print(f"CSV:{src_mb:.1f} MB")
+    print(f"Parquet: {dst_mb:.1f} MB")
+    print(f"Rows: {len(df):,}  Columns:{len(df.columns)}")
 
 
 if __name__ == "__main__":

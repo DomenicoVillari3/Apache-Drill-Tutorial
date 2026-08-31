@@ -1,8 +1,3 @@
-"""
-Carica il dataset Therapeutic Locator (clean) in MongoDB.
-Prerequisito: data/therapeutic/therapeutic_locator_clean.csv già presente.
-Uso: python init-mongo/01_load_therapeutic.py
-"""
 import csv
 import os
 import sys

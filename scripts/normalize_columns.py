@@ -1,18 +1,7 @@
-"""
-Rinomina le colonne dei dataset con spazi/mixed-case in snake_case.
-Output: file *_clean.csv pronti per COPY (Postgres) e mongoimport (MongoDB).
-
-Uso: python3 scripts/normalize_columns.py
-     (dalla root del progetto)
-"""
-
 import csv
 import os
 
-# ---------------------------------------------------------------------------
-# Mapping colonne
-# ---------------------------------------------------------------------------
-
+#columns mapping 
 DATASET2_MAP = {
     "state": "state",
     "collection_date":   "collection_date",
@@ -80,18 +69,16 @@ DATASET5_MAP = {
     "Provider Note":         "provider_note",
 }
 
-# Campi numerici del Dataset 2 che contengono virgola come separatore migliaia
+# numeric field with , 
 DATASET2_NUMERIC = {
     "estimated_beds_covid", "count_ll", "count_ul",
     "pct_beds_covid", "pct_ll", "pct_ul",
     "total_inpatient_beds", "total_ll", "total_ul",
 }
 
-# Dataset 1: nessun mapping colonne (resta grezzo apposta, vedi Query 1 nel
-# notebook per la dimostrazione di schema-on-read). Puliamo solo la colonna
-# usata da ogni altra query (Q4a-Q4f, Q6), cosi' quelle query non devono piu'
-# ripetere REPLACE/NULLIF/CAST ad ogni FROM.
+#dataset 1 clean only 1 field and other schema on read 
 DATASET1_NUMERIC = {"inpatient_beds_used_covid"}
+
 
 
 def clean_value(col_name: str, value: str, numeric_fields: set) -> str:
@@ -100,13 +87,10 @@ def clean_value(col_name: str, value: str, numeric_fields: set) -> str:
     return value
 
 
-# ---------------------------------------------------------------------------
-# Lavoro
-# ---------------------------------------------------------------------------
-
+# (name, csv source, csv clean, column mapping, numeric fields, warn unmapped)
 jobs = [
     (
-        "Dataset 2 — Estimated Beds (→ PostgreSQL)",
+        "Dataset 2 — Estimated Beds ( PostgreSQL)",
         "data/estimated_beds/estimated_beds.csv",
         "data/estimated_beds/estimated_beds_clean.csv",
         DATASET2_MAP,
@@ -114,7 +98,7 @@ jobs = [
         True,
     ),
     (
-        "Dataset 3 — Therapeutic Locator (→ MongoDB)",
+        "Dataset 3 — Therapeutic Locator ( MongoDB)",
         "data/therapeutic/therapeutic_locator.csv",
         "data/therapeutic/therapeutic_locator_clean.csv",
         DATASET3_MAP,
@@ -126,7 +110,7 @@ jobs = [
         "data/treatments/treatments.csv",
         "data/treatments/treatments_clean.csv",
         DATASET5_MAP,
-        set(),
+        set(), #no numeric 
         True,
     ),
     (
@@ -139,9 +123,10 @@ jobs = [
     ),
 ]
 
+
 for name, src, dst, col_map, numeric_fields, warn_unmapped in jobs:
     if not os.path.exists(src):
-        print(f"[SKIP] {name}: file non trovato ({src})")
+        print(f"{name}: file non trovato ({src})")
         continue
 
     with open(src, newline="", encoding="utf-8") as fin, \
@@ -153,7 +138,7 @@ for name, src, dst, col_map, numeric_fields, warn_unmapped in jobs:
         if warn_unmapped:
             unmapped = [c for c in original_cols if c not in col_map]
             if unmapped:
-                print(f"[WARN] {name}: colonne senza mapping (lasciate invariate): {unmapped}")
+                print(f"[ {name}: colonne senza mapping: {unmapped}")
 
         new_cols = [col_map.get(c, c) for c in original_cols]
         writer = csv.DictWriter(fout, fieldnames=new_cols)
@@ -166,7 +151,8 @@ for name, src, dst, col_map, numeric_fields, warn_unmapped in jobs:
             }
             writer.writerow(new_row)
 
-    size_mb = os.path.getsize(dst) / (1024 * 1024)
-    print(f"[OK]   {name}")
-    print(f"       {src} → {dst}  ({size_mb:.2f} MB)")
-    print(f"       Colonne: {original_cols} → {new_cols}\n")
+    size_mb = os.path.getsize(dst) / (1024 * 124)
+    
+    print(f"done:  {name}")
+    print(f"{src} :  {dst}  ({size_mb:.2f} MB)")
+    print(f"Colonne: {original_cols} : {new_cols}\n")
