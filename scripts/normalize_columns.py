@@ -87,6 +87,12 @@ DATASET2_NUMERIC = {
     "total_inpatient_beds", "total_ll", "total_ul",
 }
 
+# Dataset 1: nessun mapping colonne (resta grezzo apposta, vedi Query 1 nel
+# notebook per la dimostrazione di schema-on-read). Puliamo solo la colonna
+# usata da ogni altra query (Q4a-Q4f, Q6), cosi' quelle query non devono piu'
+# ripetere REPLACE/NULLIF/CAST ad ogni FROM.
+DATASET1_NUMERIC = {"inpatient_beds_used_covid"}
+
 
 def clean_value(col_name: str, value: str, numeric_fields: set) -> str:
     if col_name in numeric_fields and value:
@@ -105,6 +111,7 @@ jobs = [
         "data/estimated_beds/estimated_beds_clean.csv",
         DATASET2_MAP,
         DATASET2_NUMERIC,
+        True,
     ),
     (
         "Dataset 3 — Therapeutic Locator (→ MongoDB)",
@@ -112,6 +119,7 @@ jobs = [
         "data/therapeutic/therapeutic_locator_clean.csv",
         DATASET3_MAP,
         set(),
+        True,
     ),
     (
         "Dataset 5 — Treatments (dfs CSV)",
@@ -119,10 +127,19 @@ jobs = [
         "data/treatments/treatments_clean.csv",
         DATASET5_MAP,
         set(),
+        True,
+    ),
+    (
+        "Dataset 1 — Hospital Capacity (dfs CSV, numbers only)",
+        "data/covid/hospital_capacity.csv",
+        "data/covid/hospital_capacity_clean.csv",
+        {},
+        DATASET1_NUMERIC,
+        False,
     ),
 ]
 
-for name, src, dst, col_map, numeric_fields in jobs:
+for name, src, dst, col_map, numeric_fields, warn_unmapped in jobs:
     if not os.path.exists(src):
         print(f"[SKIP] {name}: file non trovato ({src})")
         continue
@@ -133,9 +150,10 @@ for name, src, dst, col_map, numeric_fields in jobs:
         reader = csv.DictReader(fin)
         original_cols = reader.fieldnames or []
 
-        unmapped = [c for c in original_cols if c not in col_map]
-        if unmapped:
-            print(f"[WARN] {name}: colonne senza mapping (lasciate invariate): {unmapped}")
+        if warn_unmapped:
+            unmapped = [c for c in original_cols if c not in col_map]
+            if unmapped:
+                print(f"[WARN] {name}: colonne senza mapping (lasciate invariate): {unmapped}")
 
         new_cols = [col_map.get(c, c) for c in original_cols]
         writer = csv.DictWriter(fout, fieldnames=new_cols)

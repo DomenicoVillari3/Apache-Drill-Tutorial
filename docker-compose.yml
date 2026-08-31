@@ -96,7 +96,7 @@ services:
         condition: service_healthy
     volumes:
       - ./data:/data/healthdata
-      - ./drill-config/storage-plugins.json:/opt/drill/conf/storage-plugins-override.json
+      - ./drill-config/storage-plugins.conf:/opt/drill/conf/storage-plugins-override.conf
       - ./jdbc-drivers/postgresql-42.7.3.jar:/opt/drill/jars/3rdparty/postgresql-42.7.3.jar
     stdin_open: true
     environment:
