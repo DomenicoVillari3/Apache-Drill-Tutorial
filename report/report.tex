@@ -33,8 +33,6 @@
 \fancyhead[L]{\small Apache Drill as a Federated Query Engine}
 \fancyhead[R]{\small \thepage}
 \renewcommand{\headrulewidth}{0.3pt}
-
-% ---- listings styles -------------------------------------------------
 \definecolor{codebg}{RGB}{247,247,247}
 \definecolor{codekw}{RGB}{0,90,150}
 \definecolor{codestr}{RGB}{140,20,20}
@@ -131,6 +129,9 @@
 \author{Domenico Villari\\\small Big Data Analytics}
 \date{\today}
 
+
+
+
 \begin{document}
 
 \begin{titlepage}
@@ -138,7 +139,7 @@
 \vspace*{3cm}
 {\Huge\textbf{Apache Drill as a Federated Query Engine}\par}
 \vspace{0.6cm}
-{\Large A Hands-On Tutorial over COVID-19 Open Data\par}
+{\Large  Tutorial over COVID-19 Open Data\par}
 \vspace{2cm}
 {\large Domenico Villari\par}
 {\normalsize Big Data Analytics \par}
@@ -151,42 +152,41 @@
 \tableofcontents
 \newpage
 
-% =======================================================================
+
+
+
+
+
 \section{Introduction}
 \label{sec:intro}
 
 \subsection{What Apache Drill Is}
 
 Apache Drill is a distributed SQL query engine designed for \textbf{schema-on-read}
-analysis of data. It originated in the \textbf{Hadoop ecosystem}.  The system isn't a database in the traditional sense: it has no native storage layer of its own. Instead, it compiles a SQL query into a
-distributed execution plan and push parts of that plan down into whatever
-\emph{storage plugins} are configured, a local or distributed filesystem, a JDBC-reachable
-relational database, a MongoDB cluster, HBase, Kafka, and so on. The engine's job is to
-make many different systems addressable through one SQL dialect and one execution
-engine, resolving each table reference and each column's type at query time rather
-than from a pre-registered catalog.
+analysis of data. It originated in the \textbf{Hadoop ecosystem}. 
+The system isn't a database in the traditional sense: it has no native storage layer of its own.
+Instead, it \textbf{compiles a SQL query into a distributed execution plan} and \textbf{push parts of that plan down into whatever \emph{storage plugins} are configured}, a local or distributed filesystem, a JDBC-reachable relational database, a MongoDB cluster, HBase, Kafka, and so on. The engine's job is to make many different systems addressable through one SQL dialect and one execution engine, resolving each table reference and each column's type at query time rather than from a pre-registered catalog.
 
 This positions Drill specifically for \textbf{exploratory and integrative analytics}: connecting
 a data scientist's SQL skills directly to whatever storage a dataset already lives in,
 without first standing up a data warehouse or writing loader jobs. Two properties make
-this practical. First, schema-on-read: Drill infers column types by sampling the data
+this practical.
+First, \textbf{schema-on-read}: Drill infers column types by sampling the data
 at query time, so a CSV file with an irregular header, or a MongoDB collection whose
-documents vary from one record to the next, is queryable immediately. Second, storage
-plugins are composable within a single query: a \texttt{JOIN} clause can freely mix
-tables that live in entirely different systems, and Drill takes care of scanning each
-one, pushing down filters and aggregations where the underlying system supports them,
-and combining the partial results in its own execution engine.
+documents vary from one record to the next, is queryable immediately. 
+
+Second, storage\textbf{ plugins are composable within a single query}: a \texttt{JOIN} clause can freely mix tables that live in entirely different systems, and Drill takes care of scanning each one, pushing down filters and aggregations where the underlying system supports them, and combining the partial results in its own execution engine.
 
 \subsection{The Problem}
 
 Real organizations rarely keep all their data in one place. A typical pipeline has
 flat files dropped by an external partner, a relational database serving an
 operational application, and a document store holding semi-structured records from a
-web service. Answering a single analytical question that spans all three normally
+web service. 
+Answering a single analytical question that spans all three normally
 requires an \textbf{ETL }step: export each source, reshape it into a common format, and load it
 into a data warehouse or a single analytical database before a SQL query can touch all
-of it together. That step costs engineering time, introduces staleness (the warehouse
-copy lags the source), and duplicates storage. For small, one-off, or exploratory
+of it together. That step costs engineering time, so  for small,  exploratory
 questions, that cost is disproportionate to the question being asked.
 
 \subsection{Domain: HealthData.gov COVID-19 Data}
@@ -194,16 +194,17 @@ questions, that cost is disproportionate to the question being asked.
 The dataset used throughout this tutorial comes from
 \textbf{HealthData.gov}, the open-data portal of the U.S.
 \textbf{Department of Health \& Human Services (HHS)}. four distinct COVID-19 datasets are
-used, described in full in Section~\ref{sec:datasets}: \begin{itemize}
+used, described in full in Section~\ref{sec:datasets}: 
+\begin{itemize}
     \item state-level hospital capacity
 time series
 \item  HHS's own statistical estimate of the same phenomenon
 \item a locator of
 COVID-19 therapeutic dispensing sites
 \item  a county-level epidemiological summary
-\item a
-dataset of antiviral treatment availability by site.
+\item a dataset of antiviral treatment availability by site.
 \end{itemize}
+
 All four originate from the same
 pandemic-response reporting effort but were designed, collected and shaped by
 different teams for different purposes, which is exactly why they end up looking so
@@ -216,43 +217,32 @@ suited to a document store.
 \subsection{What This Tutorial Demonstrates}
 
 Concretely, the tutorial: \begin{enumerate}
-    \item How to istantiate Drill, PostgreSQL, MongoDB and Jupyter with
-Docker Compose;
-\item loads the same conceptual data differently depending on its shape: raw CSV on the filesystem, a normalized table in PostgreSQL, unstructured documents in
+    \item \textbf{How to istantiate Drill, PostgreSQL, MongoDB and Jupyter with
+Docker Compose};
+\item \textbf{loads} the same conceptual \textbf{data} differently depending on its shape: raw CSV on the filesystem, a normalized table in PostgreSQL, unstructured documents in
 MongoDB;
-\item configures three Drill storage plugins (\texttt{dfs}, \texttt{pg},
-\texttt{mongo})
-\item runs single-source queries against each backend to show
-schema-on-read, JDBC pushdown and document-model flexibility individually
-\item builds up, step by step, a federated query that joins all three sources in one
-\texttt{SELECT} statement:  first pre-aggregated by state, then at full row-level
+\item \textbf{configures three Drill storage plugin}s (\texttt{dfs}, \texttt{pg}, \texttt{mongo})
+\item \textbf{runs single-source queries} against each backend to show
+schema-on-read, JDBC usage and document-model flexibility individually
+\item \textbf{builds up}, step by step, \textbf{a federated query that joins all sources in one
+\texttt{SELECT} statement}:  first pre-aggregated by state, then at full row-level
 granularity
 \end{enumerate}
 
-A scope note: this tutorial deliberately distributes \emph{four different} datasets
-across three backends by natural fit -- a flat time series on \texttt{dfs}, a regular
-relational table on \texttt{pg}, variable-schema records on \texttt{mongo} -- rather
-than copying one identical dataset onto every backend to isolate the effect of
-storage format alone. That second design is a legitimate, complementary question
-(does Parquet beat raw JSON on the same data, does an indexed lookup beat a full
-scan), just not the one this tutorial answers: the question here is whether Drill
-can federate heterogeneous, already-fitting sources with no ETL, not how fast any
-one format is in isolation.
-% =======================================================================
+
 \section{System Architecture}
 \label{sec:architecture}
 
-The entire environment runs as a set of Docker containers on a single machine,
+The entire environment runs as a set of \textbf{Docker containers} on a single machine,
 orchestrated with a \texttt{docker-compose.yml} file and connected through a private
 bridge network named \texttt{health-net} (the full walkthrough of that file is in
-Section~\ref{sec:setup}; here we only need the shape of the system). Four services
-matter for the Drill narrative:\textbf{ PostgreSQL, MongoDB, Apache Drill} itself, and a
-\textbf{Jupyter notebook }used to drive queries and plot results.
+Section~\ref{sec:setup}).
+Four services matter for the Drill narrative:\textbf{ PostgreSQL, MongoDB, Apache Drill} itself, and a \textbf{Jupyter notebook }used to drive queries and plot results.
 
 Figure~\ref{fig:architecture} shows how they relate. The key idea to take away from
-this diagram is that \textbf{Drill is not a database}: it holds no data of its own. It
-\textbf{is a distributed query engine} that reaches \emph{into} \textbf{PostgreSQL over JDBC}, into
-\textbf{MongoDB over its native wire protocol}, a\textbf{nd into a mounted directory of CSV and
+this diagram is that \textbf{Drill is not a database}: it holds no data of its own.
+It \textbf{is a distributed query engine} that reaches \emph{into} \textbf{PostgreSQL over JDBC}, into
+\textbf{MongoDB over its native wire protocol}, \textbf{and into a mounted directory of CSV and
 Parquet files on the local filesystem}. \\
 Each of those three connections is configured
 as a Drill \emph{storage plugin}:
@@ -263,8 +253,7 @@ as a Drill \emph{storage plugin}:
     here it is configured with \texttt{"connection": "file:///"}, a plain local
     directory (\texttt{./data} on the host, mounted at \texttt{/data/healthdata} in
     the Drill container). \textbf{No HDFS and no distributed storage are involved}:
-    it is the container's own local disk. It understands multiple file formats: CSV, JSON, Parquet;  so \emph{CSV and Parquet are two formats under the same plugin}, not two
-    separate sources.
+    it is the container's own local disk. It understands multiple file formats: CSV, JSON, Parquet;  so \emph{CSV and Parquet are two formats under the same plugin.}
   \item \texttt{pg}: a generic JDBC plugin pointed at the PostgreSQL instance.
   \item \texttt{mongo}: a native MongoDB plugin that reads BSON documents directly
     and exposes them as SQL rows.
@@ -295,16 +284,18 @@ as a Drill \emph{storage plugin}:
 \caption{Core services of the tutorial environment, all attached to the
 \texttt{health-net} Docker bridge network and addressable by hostname. Drill has no
 storage engine of its own: it reaches PostgreSQL over JDBC, MongoDB over its native
-driver, and local CSV/Parquet files through the \texttt{dfs} plugin. Jupyter never
-talks to PostgreSQL or MongoDB directly -- it always goes through Drill's REST API.}
+driver, and local CSV/Parquet files through the \texttt{dfs} plugin. }
+%Jupyter nevertalks to PostgreSQL or MongoDB directly , it always goes through Drill's REST API.}
 \label{fig:architecture}
 \end{figure}
 
 The Docker Compose file used for development also defines two optional
 administration UIs, \texttt{pgadmin} (a PostgreSQL admin console on port 5050) and
-\texttt{mongo-express} (a MongoDB admin console on port 8081). Neither is essential for the work of Drill: they exist purely so a human can browse the raw tables/collections
-visually while debugging, so they are omitted from Figure~\ref{fig:architecture}.
-% =======================================================================
+\texttt{mongo-express} (a MongoDB admin console on port 8081). Neither is essential for the work of Drill.~\ref{fig:architecture}.
+
+
+
+
 \section{The Four Datasets}
 \label{sec:datasets}
 
@@ -326,7 +317,7 @@ dataset actually records and which columns matter for the queries in this tutori
 2. Estimated Beds         & \texttt{pg}    & 1{,}612  & 12   & Regular relational table, HHS's own estimate \\
 3. Therapeutic Locator    & \texttt{mongo} & 69{,}184 & 15   & Variable-schema provider records \\
 4. Community Profile (county) & \texttt{dfs} & 3{,}294 & 39   & Finer-grained companion to Dataset 1 \\
-%5. Treatments             & \texttt{dfs}   & 64{,}237 & 31 & Prepared, not queried live (see Appendix~\ref{app:extra}) \\
+
 \bottomrule
 \end{tabular}
 \caption{The four datasets, their Drill storage plugin, and their raw size as measured
@@ -341,7 +332,7 @@ Key columns:
 \begin{itemize}[leftmargin=1.6em]
   \item \texttt{state} -- two-letter U.S. state code.
   \item \texttt{date} -- reporting day, stored as a plain \texttt{yyyy/MM/dd} string
-    (not a native date type -- this matters in Section~\ref{sec:federated-join}).
+    (not a native date type, this matters in Section~\ref{sec:federated-join}).
   \item \texttt{inpatient\_beds\_used\_covid} -- inpatient beds occupied by confirmed
     COVID-19 patients. Raw values use a comma as a thousands separator (e.g.\
     \texttt{"1,338"}) and can be empty, which is why every query that touches this
@@ -353,15 +344,15 @@ Key columns:
 \end{itemize}
 The remaining $\sim$130 columns break these same measures down further: by age
 bracket, by pediatric vs.\ adult, by ventilator use, by influenza co-infection, by
-data-coverage flags; and are not used individually in this tutorial; the full list
-is in \texttt{scripts/output/inspect\_dataset\_out.txt}. This dataset also has a
+data-coverage flags; and are not used individually in this tutorial;
+. This dataset also has a
 cleaned, Parquet-converted counterpart (Section~\ref{sec:data-prep}).
 
 \paragraph{Dataset 2: COVID-19 Estimated Inpatient Beds Occupied by State.}
 HHS's own statistical estimate of the same phenomenon Dataset~1 reports directly,
 which is exactly what makes it interesting to compare against Dataset~1 in
 Section~\ref{sec:federated-join}. Regular, stable schema -- state $\times$ date
-$\times$ a handful of numeric estimates -- so it was loaded into PostgreSQL rather
+$\times$ a handful of numeric estimates,  So it was\textbf{ loaded into PostgreSQL} rather
 than left as a flat file. Columns, after normalization (Section~\ref{sec:data-prep}):
 \begin{itemize}[leftmargin=1.6em]
   \item \texttt{state}, \texttt{collection\_date} -- the latter stored as a genuine
@@ -379,7 +370,7 @@ than left as a flat file. Columns, after normalization (Section~\ref{sec:data-pr
 \paragraph{Dataset 3: COVID-19 Public Therapeutic Locator.}
 One row per (pharmacy or clinic, therapy) pair: which sites dispense which COVID-19
 antiviral drug. Fields vary meaningfully across therapy types, which is the reason
-this dataset was loaded into MongoDB as a document collection instead of a relational
+\textbf{this dataset was loaded into MongoDB }as a document collection instead of a relational
 table.
 \begin{itemize}[leftmargin=1.6em]
   \item \texttt{provider\_name}, \texttt{address1/2}, \texttt{city}, \texttt{county},
@@ -412,8 +403,6 @@ than a raw daily count. Used in the multi-scale Query~6
     -- vaccination coverage.
 \end{itemize}
 
-%\paragraph{Dataset 5: COVID-19 Treatments.}
-%A wide, mostly-boolean table describing \emph{where} each of the three antiviral drugs (Paxlovid, Lagevrio, Veklury) is stocked and through which supply channel (government vs.\ commercial). It was cleaned and loaded onto the \texttt{dfs} plugin like Datasets 1 and 4, but --- per the scope of this tutorial's live notebook --- it is not queried in the sections that follow; a ready-to-run example query against it is given in Appendix~\ref{app:extra} for readers who want to extend the demo. Representative columns: \texttt{provider\_name}, \texttt{city}, \texttt{state}, \texttt{zip}, \texttt{latitude}/\texttt{longitude}, \texttt{is\_pap\_site}, \texttt{is\_telehealth\_site}, \texttt{pharmacist\_prescribing}, \texttt{home\_delivery}, and one boolean flag per drug and supply channel (\texttt{has\_paxlovid}, \texttt{has\_usg\_paxlovid}, \texttt{has\_commercial\_paxlovid}, \texttt{has\_lagevrio}, \ldots, \texttt{has\_veklury}).
 
 Table~\ref{tab:roles} summarizes, in one place, the fit between each backend and the
 kind of data it was given -- the reasoning spelled out per-dataset above, collected
@@ -435,15 +424,18 @@ into a single reference.
 \label{tab:roles}
 \end{table}
 
-% =======================================================================
+
+
+
 \newpage
 \section{Environment Setup}
 \label{sec:setup}
 
 \subsection{Prerequisites}
 The only prerequisite is \textbf{Docker} (verified with \texttt{docker --version}).
-Everything else -- Drill, PostgreSQL, MongoDB, Jupyter -- is provisioned automatically
-by Docker Compose. The one artifact that has to be fetched \emph{before} the first
+Everything else: Drill, PostgreSQL, MongoDB, Jupyter,  is provisioned automatically
+by Docker Compose.
+The one artifact that has to be fetched \emph{before} the first
 \texttt{docker-compose up}, so that the volume mount in
 Section~\ref{sec:setup}'s Drill service has something to mount, is the PostgreSQL
 JDBC driver:
@@ -563,19 +555,21 @@ three enabled plugins – dfs, pg, mongo.}
 \end{figure}
 
 
-% =======================================================================
+
+
+
 \section{Data Preparation}
 \label{sec:data-prep}
 
 Not every dataset is prepared the same way, and that is a deliberate part of the
 tutorial's design. The \textbf{raw} \texttt{covid/hospital\_capacity.csv} (Dataset~1)
 is kept exactly as downloaded, messy headers and comma-formatted numbers included,
-specifically so Query~1 (Section~\ref{sec:basic-queries}) can demonstrate
-schema-on-read: cleaning happens inside that one SQL statement. Every other query
+specifically so Query~1 (Section~\ref{sec:basic-queries}) \textbf{can demonstrate
+schema-on-read}: cleaning happens inside that one SQL statement.  Every other query
 that touches Dataset~1, though, reads a second, numbers-cleaned copy of the same
 file (\texttt{hospital\_capacity\_clean.csv}) produced once upstream, so they are not
-forced to repeat that cleaning trick just to do a plain \texttt{SUM}. \textbf{Dataset~4}
-stays fully raw on \texttt{dfs} throughout. \textbf{Datasets~2, 3 and~5, by
+forced to repeat that cleaning trick just to do a plain \texttt{SUM}. \textbf{
+Dataset~4} stays fully raw on \texttt{dfs} throughout. \textbf{Datasets~2, 3, by
 contrast, are normalized \emph{before} loading} into PostgreSQL and MongoDB,
 because neither benefits from messy, space-containing column headers the way a
 schema-on-read demo does.
@@ -642,16 +636,16 @@ cp "data/COVID-19_Treatments_${DATE}.csv" \
 mv data/COVID-19_*.csv data/raw/   # keep the untouched originals for reference
 \end{lstlisting}
 
-Finally, \texttt{scripts/inspect\_datasets.py} documents the result --- exactly the
+Finally, \texttt{scripts/inspect\_datasets.py} documents the result:  exactly the
 row/column/size numbers quoted in Table~\ref{tab:datasets}:
 
 \begin{lstlisting}[style=bashstyle]
-python3 scripts/inspect_datasets.py > scripts/output/inspect_dataset_out.txt
+python3 scripts/inspect_datasets.py 
 \end{lstlisting}
 
 \subsection{Column Normalization}
-\texttt{scripts/normalize\_columns.py} renames the mixed-case, space-containing raw
-headers of Datasets~2, 3 and~5 to \texttt{snake\_case} using three hard-coded mapping
+\texttt{scripts/normalize\_columns.py} \textbf{renames the mixed-case, space-containing raw
+headers of Datasets~2, 3 and~5} to \texttt{snake\_case} using three hard-coded mapping
 dictionaries, and writes out \texttt{*\_clean.csv} files (e.g.\
 \texttt{estimated\_beds\_clean.csv}). For Dataset~2 specifically, it also strips the
 thousands-separator commas from nine numeric fields before they reach PostgreSQL, so
@@ -679,7 +673,10 @@ $\sim$3.6$\times$ reduction. This artifact is available on the \texttt{dfs} plug
 \begin{lstlisting}[style=bashstyle]
 python3 scripts/csv_to_parquet.py
 \end{lstlisting}
-% =======================================================================
+
+
+
+
 \section{Loading Data into PostgreSQL and MongoDB}
 \label{sec:loading}
 
@@ -741,7 +738,7 @@ python3 init-mongo/01_load_therapeutic.py
 \end{lstlisting}
 
 
-% =======================================================================
+
 \section{Configuring Drill Storage Plugins}
 \label{sec:plugins}
 
@@ -750,8 +747,7 @@ reproducibility this project keeps the configuration in a file,
 \texttt{drill-config/storage-plugins.conf}, mounted into the container as
 \texttt{/opt/drill/conf/storage-plugins-override.conf} and applied automatically on
 startup. \textbf{The filename matters}: Drill only looks for an override file named
-exactly \texttt{storage-plugins-override.conf} (HOCON format -- a superset of JSON,
-so the JSON content below is valid as-is); mounting it as \texttt{.json} instead, as
+exactly \texttt{storage-plugins-override.conf} (HOCON format, a superset of JSON); mounting it as \texttt{.json} instead, as
 an earlier revision of this project did, means Drill silently ignores it and boots
 with only its own default \texttt{cp}/\texttt{dfs} plugins, no error logged anywhere.
 
@@ -814,7 +810,7 @@ SELECT * FROM mongo.healthdata.therapeutic LIMIT 5;
 
 
 
-% =======================================================================
+
 \section{Basic Federated Queries}
 \label{sec:basic-queries}
 
@@ -878,15 +874,46 @@ preprocessing outside the query itself. \begin{itemize}
 word and must be back-ticked.
 \item  Second, \texttt{REPLACE(\ldots, ',', '')} strips the
 thousands separator before \texttt{NULLIF} turns empty strings into SQL \texttt{NULL}
-and \texttt{CAST} converts the result to \texttt{BIGINT}, this is schema-on-read in
+and \texttt{CAST} converts the result to \texttt{BIGINT}, this is \textbf{schema-on-read }in
 practice: the raw text column is coerced to a number \emph{inside} the query, on the
 fly.
 \item Third, the outer \texttt{WHERE covid\_beds\_used IS NOT NULL} is not redundant:
 Drill sorts \texttt{NULL} as larger than any number under a default descending
 \texttt{ORDER BY}, so rows with missing data would otherwise appear \emph{first},
 ahead of every real value.
-\end{itemize}  This query returns 20 rows in a median 2.22\,s over 3 runs.
+\end{itemize}  This query returns 20 rows in a median 1.02\,s over 3 runs.
 
+\subsection{Query 1b -- Same Data, Parquet Instead of CSV (\texttt{dfs})}
+\label{sec:q1b}
+Section~\ref{sec:architecture} claims that \texttt{dfs} reads CSV and Parquet as
+two formats under the \emph{same} plugin. Query~1b makes that claim concrete: the
+exact same aggregation as Query~1, against the exact same underlying data, but
+reading \texttt{covid\_parquet/hospital\_capacity.parquet} instead of the raw CSV.
+\begin{lstlisting}[style=sqlstyle]
+SELECT state, `date`, covid_beds_used FROM (
+  SELECT state,
+         `date`,
+         SUM(inpatient_beds_used_covid) AS covid_beds_used
+  FROM dfs.healthdata.`covid_parquet/hospital_capacity.parquet`
+  WHERE `date` >= '2021/01/01'
+  GROUP BY state, `date`
+)
+WHERE covid_beds_used IS NOT NULL
+ORDER BY covid_beds_used DESC
+LIMIT 20
+\end{lstlisting}
+Two things stand out. First, the query itself is shorter: the Parquet file was
+produced once, upstream, by \texttt{scripts/csv\_to\_parquet.py}
+(Section~\ref{sec:data-prep}), which also converts \texttt{inpatient\_beds\_used\_covid}
+to a real numeric column -- so none of Query~1's \texttt{REPLACE}/\texttt{NULLIF}/\texttt{CAST}
+cleanup is needed here; Parquet carries its own schema, CSV does not. Second, it is
+faster: a median 0.60\,s over 3 runs versus Query~1's 1.02\,s, for byte-identical
+results (the same 20 rows, same order -- Parquet's numeric column simply renders as
+a float rather than a cast \texttt{BIGINT}). Drill's own query plan explains why: the
+Parquet scan's estimated I/O cost is roughly 240 times lower than the CSV scan's,
+because Parquet is columnar and compressed (16\,MB versus the CSV's 58\,MB for the
+same rows) and lets Drill skip straight to the one column it needs instead of
+parsing every field of every row as text.
 \subsection{Query 2 -- Aggregation on PostgreSQL (\texttt{pg})}
 \begin{lstlisting}[style=sqlstyle]
 SELECT state,
@@ -944,7 +971,7 @@ Section~\ref{sec:notebook}'s planning/queued/execution breakdown
 query \emph{planning} is the larger share of the total time, not execution against
 the backend.
 
-% =======================================================================
+
 \section{Building the Federated Join Incrementally}
 \label{sec:federated-join}
 
@@ -1095,7 +1122,7 @@ representations}: \texttt{dfs}'s \texttt{date} is a plain \texttt{VARCHAR}
 (\texttt{yyyy/MM/dd}), \texttt{pg}'s \texttt{collection\_date} a native \texttt{DATE},
 so the predicate needs \texttt{TO\_DATE(h.\`date\`, 'yyyy/MM/dd')}. \textbf{Second, neither side is
 pre-aggregated}: the join matches at full row-level granularity, returning
-1{,}581 rows instead of 51, at a median 2.61\,s over 3 runs: by far the slowest
+1{,}581 rows instead of 51, at a median 2.52\,s over 3 runs: by far the slowest
 query in the tutorial (Figure~\ref{fig:join-cost}). 
 
 This also separates two
@@ -1122,7 +1149,7 @@ annotated on each bar -- note Q4f's jump from 51 to 1{,}581 rows.}
 \label{fig:join-cost}
 \end{figure}
 
-% =======================================================================
+
 \section{Multi-Scale Query}
 \label{sec:multiscale}
 
@@ -1148,11 +1175,11 @@ JOIN dfs.healthdata.`county/community_profile.csv` c
 ORDER BY state_covid_beds DESC, county_cases_7d DESC
 LIMIT 30
 \end{lstlisting}
-This query returns 30 rows in a median 0.70\,s over 3 runs and pairs each state's aggregate bed usage with
+This query returns 30 rows in a median 0.86\,s over 3 runs and pairs each state's aggregate bed usage with
 every county inside it, ordered so that the state under the most pressure (and, within
 it, the counties with the most recent cases) appear first.
 
-% =======================================================================
+
 \section{The Jupyter Notebook and Results}
 \label{sec:notebook}
 
@@ -1235,17 +1262,18 @@ milliseconds.
 \toprule
 \textbf{Query} & \textbf{Category} & \textbf{Sec.} & \textbf{Rows} & \textbf{Plan (ms)} & \textbf{Queued (ms)} & \textbf{Exec (ms)} \\
 \midrule
-sanity-check               & setup           & 0.179 & 1     & 18  & 0 & 6    \\
-Q1 dfs-csv                 & single-source   & 2.219 & 20    & 255 & 0 & 1{,}584 \\
-Q2 pg                      & single-source   & 1.291 & 20    & 170 & 0 & 343  \\
-Q3 mongo                   & single-source   & 0.248 & 20    & 107 & 0 & 51   \\
-QP point-lookup            & single-source   & 0.205 & 1     & 61  & 0 & 9    \\
-Q4a dfs+pg                 & 2-way-join      & 1.669 & 51    & 520 & 1 & 1{,}001 \\
-Q4b dfs+mongo              & 2-way-join      & 1.371 & 52    & 327 & 0 & 797  \\
-Q4c pg+mongo               & 2-way-join      & 0.631 & 51    & 172 & 0 & 397  \\
-Q4d dfs+pg+mongo           & 3-way-join      & 2.075 & 51    & 668 & 1 & 1{,}630 \\
-Q4f dfs+pg+mongo row-level & row-level-join  & 2.611 & 1{,}581 & 409 & 0 & 2{,}130 \\
-Q6 dfs-multi-scale         & other           & 0.700 & 30    & 173 & 0 & 493  \\
+sanity-check               & setup           & 0.139 & 1     & 27  & 0 & 24   \\
+Q1 dfs-csv                 & single-source   & 1.020 & 20    & 233 & 0 & 514  \\
+Q1b dfs-parquet            & single-source   & 0.605 & 20    & 228 & 0 & 187  \\
+Q2 pg                      & single-source   & 0.846 & 20    & 99  & 0 & 499  \\
+Q3 mongo                   & single-source   & 0.274 & 20    & 173 & 0 & 62   \\
+QP point-lookup            & single-source   & 0.094 & 1     & 31  & 0 & 7    \\
+Q4a dfs+pg                 & 2-way-join      & 1.913 & 51    & 279 & 1 & 1{,}302 \\
+Q4b dfs+mongo              & 2-way-join      & 0.762 & 52    & 232 & 0 & 458  \\
+Q4c pg+mongo               & 2-way-join      & 1.048 & 51    & 172 & 0 & 895  \\
+Q4d dfs+pg+mongo           & 3-way-join      & 1.772 & 51    & 541 & 1 & 1{,}041 \\
+Q4f dfs+pg+mongo row-level & row-level-join  & 2.522 & 1{,}581 & 299 & 0 & 1{,}590 \\
+Q6 dfs-multi-scale         & other           & 0.857 & 30    & 255 & 0 & 465  \\
 \bottomrule
 \end{tabular}
 \caption{Complete timing log for one full run of the notebook, median of 3 repeats
@@ -1276,6 +1304,7 @@ Drill's own profile (\texttt{GET~/profiles/\{queryId\}.json}).}
 \label{fig:timing-breakdown}
 \end{figure}
 
+
 Figure~\ref{fig:timing-breakdown} splits each query's total time into the three
 phases Drill's profile reports. \texttt{queued\_ms} is 0--1\,ms across the board:
 with a single Drillbit and no concurrent workload, no query ever waits for
@@ -1283,16 +1312,23 @@ resources, so that phase is invisible on this setup and would only become
 interesting under concurrent load or a resource-constrained cluster. The
 planning/execution split, on the other hand, is not uniform, and it tracks how much
 actual work a query does against its backend rather than how many sources it
-touches: the sanity check (75\% planning) and QP's single-row point lookup (87\%
+touches: the sanity check (53\% planning) and QP's single-row point lookup (82\%
 planning) are so cheap to execute that Drill's own query planning dominates their
 total time, while every join and Q1's full-CSV scan spend the clear majority of
-their time in execution (65--86\%), because there is simply more data to read,
-cast, and shuffle once the query starts running. This is the reason Table~\ref{tab:timings}'s
-seconds column and this breakdown are not redundant: a query can be ``slow'' either
-because Drill takes a while to decide how to run it, or because running it is
-genuinely expensive, and only the server-side profile tells the two apart.
+their time in execution (65--84\%), because there is simply more data to read,
+cast, and shuffle once the query starts running. Query~1b (Section~\ref{sec:q1b})
+sits in between, and interestingly so: its planning cost is nearly identical to
+Query~1's (228\,ms vs.\ 233\,ms, the same query plan either way, same predicates and
+grouping) but its execution cost is little more than a third of Query~1's
+(187\,ms vs.\ 514\,ms), the CSV-versus-Parquet gap from Section~\ref{sec:q1b}
+reappears here, isolated to the execution phase alone, exactly where a
+columnar, typed format should make a difference. This is the reason
+Table~\ref{tab:timings}'s seconds column and this breakdown are not redundant: a
+query can be ``slow'' either because Drill takes a while to decide how to run it,
+or because running it is genuinely expensive, and only the server-side profile
+tells the two apart.
 
-% =======================================================================
+
 \section{Discussion}
 \label{sec:discussion}
 
@@ -1344,7 +1380,7 @@ engine, in memory, once both sides have been scanned. That is precisely why Quer
 row-level join is so much more expensive than the pre-aggregated ones: pre-aggregating
 first minimizes how many rows Drill has to shuffle and match itself.
 
-% =======================================================================
+
 \section{Conclusions}
 \label{sec:conclusions}
 Over the course of this tutorial we \textbf{brought up a four-service Docker environme}nt from
@@ -1357,14 +1393,12 @@ That incremental build-up also surfaced Drill's real cost, not just its convenie
 pushing filters and aggregations down into a single plugin is cheap, but the join
 \emph{across} plugins always happens in Drill's own memory, so its cost scales with
 row count rather than with any backend's optimizer. Query~4f's row-level join, about
-1.3$\times$ Query~4d's runtime over roughly 30$\times$ the rows, makes that limit
+1.4$\times$ Query~4d's runtime over roughly 30$\times$ the rows, makes that limit
 concrete rather than theoretical: row count, not join arity, is what actually drives
 the cost of federation here. Timing every query as the median of 3 repeats, and
 cross-checking that against Drill's own server-side planning/queued/execution
 breakdown (Section~\ref{sec:notebook}), rules out a one-off slow run as the
 explanation and confirms the gap is real execution cost, not noise.
-
-% =======================================================================
 \newpage
 \appendix
 \section{Appendix}
